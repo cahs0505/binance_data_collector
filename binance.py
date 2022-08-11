@@ -1,6 +1,7 @@
 from typing import Callable, Coroutine, List
 import pandas as pd
 import os
+import sys
 import aiohttp
 import asyncio
 import schedule
@@ -72,7 +73,7 @@ class Binance:
         increment = 60000000
         res = req.get(f'https://api.binance.com/api/v3/klines?symbol={symbol}&interval={interval}&startTime=0')
         epochTime = res.json()[0][0]
-        getter = itemgetter(0, 4)
+        getter = itemgetter(0,1,4)
         
         
 
@@ -93,7 +94,8 @@ class Binance:
                 break
 
         self.allData = list(map(list, map(getter, self.allData)))
-        df = pd.DataFrame(self.allData, columns=['openTime','close'])
+        df = pd.DataFrame(self.allData, columns=['openTime','open','close'])
+        df.drop_duplicates(subset=['openTime'])
         os.makedirs(f'/mnt/d/DATA/Crypto/binance/{symbol}', exist_ok=True) 
         df.to_csv(f'/mnt/d/DATA/Crypto/binance/{symbol}/1m.csv', index=False)
 
@@ -112,8 +114,8 @@ class Binance:
 
             for res in responses:
                 for dataPoint in res:
-
                     self.allData.append(dataPoint)
+                    
             del self.requestUrls[:1000]
             print(self._getTimeNow()+": "+ str(responses[0][0][0]) +" to "+ str(responses[-1][-1][0]) )
             print(self._getTimeNow()+": "+ str(len(self.requestUrls)) + " to fetch")
@@ -130,11 +132,13 @@ class Binance:
 
 
 def main():
+    
     binance = Binance()
-    binance.initHistorical("BTCUSDT")
+    binance.initHistorical(sys.argv[1])
 
 if __name__ == "__main__":
     main()
+
 
 
 
